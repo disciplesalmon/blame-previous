@@ -52,3 +52,27 @@ CodeCoverage/
 *.VisualState.xml
 TestResult.xml
 nunit-*.xml
+
+# Visual Studio
+.vs/
+*.suo
+*.user
+*.pdb
+*.obj
+*.exe
+*.dll
+*.pri
+*.winmd
+*.appx
+*.appxbundle
+*.msi
+*.vsix
+*.zip
+*.nupkg
+*.log
+*.bak
+*.cache
+*.tmp
+*.temp
+packages/
+node_modules/
