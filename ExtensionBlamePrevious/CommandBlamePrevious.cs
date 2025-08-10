@@ -1,95 +1,50 @@
-﻿using EnvDTE;
-using Microsoft.VisualStudio.Shell;
-using System;
-using System.ComponentModel.Design;
-using Task = System.Threading.Tasks.Task;
+﻿using System.Diagnostics;
+using Microsoft;
+using Microsoft.VisualStudio.Extensibility;
+using Microsoft.VisualStudio.Extensibility.Commands;
+using Microsoft.VisualStudio.Extensibility.Shell;
 
-namespace BlamePrevious
+namespace ExtensionBlamePrevious
 {
   /// <summary>
-  /// Command handler
+  /// CommandBlamePrevious handler.
   /// </summary>
-  internal sealed class CommandBlamePrevious
+  [VisualStudioContribution]
+  internal class CommandBlamePrevious : Command
   {
-    /// <summary>
-    /// Command ID.
-    /// </summary>
-    public const int CommandId = 0x0100;
-
-    /// <summary>
-    /// Command menu group (command set GUID).
-    /// </summary>
-    public static readonly Guid CommandSet = new Guid("216449f6-ec2d-4fbd-846d-572347750232");
-
-    /// <summary>
-    /// VS Package that provides this command, not null.
-    /// </summary>
-    private readonly AsyncPackage package;
+    private readonly TraceSource logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="CommandBlamePrevious"/> class.
-    /// Adds our command handlers for menu (commands must exist in the command table file)
     /// </summary>
-    /// <param name="package">Owner package, not null.</param>
-    /// <param name="commandService">Command service to add command to, not null.</param>
-    private CommandBlamePrevious(AsyncPackage package, OleMenuCommandService commandService)
+    /// <param name="traceSource">Trace source instance to utilize.</param>
+    public CommandBlamePrevious(TraceSource traceSource)
     {
-      this.package = package ?? throw new ArgumentNullException(nameof(package));
-      commandService = commandService ?? throw new ArgumentNullException(nameof(commandService));
-
-      var menuCommandID = new CommandID(CommandSet, CommandId);
-      var menuItem = new MenuCommand(this.Execute, menuCommandID);
-      commandService.AddCommand(menuItem);
+      // This optional TraceSource can be used for logging in the command. You can use dependency injection to access
+      // other services here as well.
+      this.logger = Requires.NotNull(traceSource, nameof(traceSource));
     }
 
-    /// <summary>
-    /// Gets the instance of the command.
-    /// </summary>
-    public static CommandBlamePrevious Instance
+    /// <inheritdoc />
+    public override CommandConfiguration CommandConfiguration => new("%BlamePrevious.CommandBlamePrevious.DisplayName%")
     {
-      get;
-      private set;
+      // Use this object initializer to set optional parameters for the command. The required parameter,
+      // displayName, is set above. DisplayName is localized and references an entry in .vsextension\string-resources.json.
+      Icon = new(ImageMoniker.KnownValues.Extension, IconSettings.IconAndText),
+      Placements = [CommandPlacement.KnownPlacements.ExtensionsMenu],
+    };
+
+    /// <inheritdoc />
+    public override Task InitializeAsync(CancellationToken cancellationToken)
+    {
+      // Use InitializeAsync for any one-time setup or initialization.
+      return base.InitializeAsync(cancellationToken);
     }
 
-    /// <summary>
-    /// Gets the service provider from the owner package.
-    /// </summary>
-    private Microsoft.VisualStudio.Shell.IAsyncServiceProvider ServiceProvider
+    /// <inheritdoc />
+    public override async Task ExecuteCommandAsync(IClientContext context, CancellationToken cancellationToken)
     {
-      get
-      {
-        return this.package;
-      }
-    }
-
-    /// <summary>
-    /// Initializes the singleton instance of the command.
-    /// </summary>
-    /// <param name="package">Owner package, not null.</param>
-    public static async Task InitializeAsync(AsyncPackage package)
-    {
-      // Switch to the main thread - the call to AddCommand in CommandBlamePrevious's constructor requires
-      // the UI thread.
-      await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(package.DisposalToken);
-
-      OleMenuCommandService commandService = await package.GetServiceAsync(typeof(IMenuCommandService)) as OleMenuCommandService;
-      Instance = new CommandBlamePrevious(package, commandService);
-    }
-
-    /// <summary>
-    /// This function is the callback used to execute the command when the menu item is clicked.
-    /// See the constructor to see how the menu item is associated with this function using
-    /// OleMenuCommandService service and MenuCommand class.
-    /// </summary>
-    /// <param name="sender">Event sender.</param>
-    /// <param name="e">Event args.</param>
-    private void Execute(object sender, EventArgs e)
-    {
-      ThreadHelper.ThrowIfNotOnUIThread();
-
-      //This is a simple example of how to invoke an existing command behind a Visual Studio menu item.
-      DTE dte = (DTE)Package.GetGlobalService(typeof(DTE));
-      dte?.ExecuteCommand("Team.Git.Annotate");
+      await this.Extensibility.Shell().ShowPromptAsync("Hello from an extension!", PromptOptions.OK, cancellationToken);
 
       //TODO: Reverse engineer where the current "Git > Blame (Annotate) > Annotate This Version" menu item lives.
       //TODO: Add a custom 'Blame Previous' menu item underneath the 'Annotate This Verison' menu item.
@@ -215,6 +170,7 @@ namespace BlamePrevious
        * Name: Team.Git.ShowToolbarActions_Push - ID: 4215 - GUID: {57735D06-C920-4415-A2E0-7D6E6FBDFA99}
        * Name: Team.Git.ShowToolbarActions_Sync - ID: 4216 - GUID: {57735D06-C920-4415-A2E0-7D6E6FBDFA99}
        ************************************************************************************************/
+
     }
   }
 }
